@@ -87,7 +87,6 @@ else:
 
 # --- chat history
 
-# Centered, animated QueryMind-AI title
 components.html(
     """
     <div class="title-container">
