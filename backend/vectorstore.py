@@ -3,7 +3,7 @@ so switching EMBED_MODEL never causes a dimension-mismatch error."""
 import re
 
 import chromadb
-from chromadb.utils.embedding_functions import SentenceTransformerEmbeddingFunction
+from fastembed import TextEmbedding
 
 from backend import config
 
@@ -12,20 +12,25 @@ class VectorStore:
     def __init__(self):
         config.CHROMA_DIR.mkdir(parents=True, exist_ok=True)
         self._db = chromadb.PersistentClient(path=str(config.CHROMA_DIR))
-        self._ef = SentenceTransformerEmbeddingFunction(model_name=config.EMBED_MODEL)
+        self._embedder = TextEmbedding(model_name=config.EMBED_MODEL)   # ONNX, no torch
         slug = re.sub(r"[^a-zA-Z0-9]+", "_", config.EMBED_MODEL).strip("_")[:40]
         self._name = f"kb_{slug}"
         self.col = self._db.get_or_create_collection(
-            self._name, embedding_function=self._ef, metadata={"hnsw:space": "cosine"}
+            self._name, metadata={"hnsw:space": "cosine"}
         )
+
+    def _embed(self, texts: list[str]) -> list[list[float]]:
+        return [v.tolist() for v in self._embedder.embed(texts)]
 
     def add(self, source: str, chunks: list[dict]) -> int:
         self.delete_source(source)               # re-uploading a file replaces it
         if not chunks:
             return 0
+        docs = [c["text"] for c in chunks]
         self.col.add(
             ids=[f"{source}::{i}" for i in range(len(chunks))],
-            documents=[c["text"] for c in chunks],
+            documents=docs,
+            embeddings=self._embed(docs),
             metadatas=[c["meta"] for c in chunks],
         )
         return len(chunks)
@@ -34,7 +39,8 @@ class VectorStore:
         n = self.col.count()
         if n == 0:
             return []
-        res = self.col.query(query_texts=[query], n_results=min(k, n))
+        qv = next(iter(self._embedder.query_embed([query]))).tolist()
+        res = self.col.query(query_embeddings=[qv], n_results=min(k, n))
         return [
             {"text": d, "meta": m, "distance": dist}
             for d, m, dist in zip(res["documents"][0], res["metadatas"][0], res["distances"][0])
@@ -52,5 +58,5 @@ class VectorStore:
     def clear(self) -> None:
         self._db.delete_collection(self._name)
         self.col = self._db.get_or_create_collection(
-            self._name, embedding_function=self._ef, metadata={"hnsw:space": "cosine"}
+            self._name, metadata={"hnsw:space": "cosine"}
         )

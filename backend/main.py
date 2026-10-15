@@ -22,14 +22,25 @@ from backend.schemas import (
     HealthResponse, IngestResponse, IngestResult, Message, SourcesResponse,
 )
 from backend.vectorstore import VectorStore
+import threading
 
 log = logging.getLogger("backend")
 HISTORY = TypeAdapter(list[Message])
+_store_lock = threading.Lock()
+
+
+def _ensure_store(app: FastAPI) -> VectorStore:
+    with _store_lock:
+        if app.state.store is None:
+            app.state.store = VectorStore()
+        return app.state.store
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    app.state.store = VectorStore()      # loads the embedding model once at startup
+    app.state.store = None
+    # warm up in the background so the port opens immediately
+    threading.Thread(target=_ensure_store, args=(app,), daemon=True).start()
     yield
 
 
@@ -37,7 +48,7 @@ app = FastAPI(title="Multimodal RAG", version="1.0.0", lifespan=lifespan)
 
 
 def get_store(request: Request) -> VectorStore:
-    return request.app.state.store
+    return _ensure_store(request.app)
 
 
 def _event(kind: str, data) -> str:
