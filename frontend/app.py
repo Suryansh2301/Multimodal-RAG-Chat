@@ -64,9 +64,42 @@ with st.sidebar:
         st.session_state.messages = []
         st.rerun()
 
+#-- time based greetings
+from datetime import datetime
+from zoneinfo import ZoneInfo
+
+
+current_time = datetime.now(ZoneInfo("Asia/Kolkata"))
+current_hour = current_time.hour
+
+
+if 5 <= current_hour < 12:
+    greeting = "Good Morning! Have a productive day!"
+elif 12 <= current_hour < 17:
+    greeting = "Good Afternoon! What can I help you with?"
+elif 17 <= current_hour < 21:
+    greeting = "Good Evening! Ready to explore somthing new?"
+elif 21 <= current_hour < 24:
+    greeting = "Good Night! Let's solve something."
+else:
+    greeting = "Hello, Night Owl"
+
 # --- chat history
 st.title("💬 QueryMind-ai")
-st.caption("Use the attach button inside the message box to add images, documents or tables.")
+# st.caption("Use the attach button inside the message box to add images, documents or tables.")
+st.markdown(
+    f"""
+    <div style="
+    text-align: center;
+    font-size: 17px;
+    padding: 8px;
+    color: #8B9DFF;
+    ">
+    {greeting}
+    </div>
+""",
+unsafe_allow_html=True
+)
 
 
 def show_sources(hits: list[dict]) -> None:
