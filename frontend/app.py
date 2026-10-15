@@ -73,6 +73,7 @@ with st.sidebar:
         st.rerun()
 
 #-- time based greetings
+import base64
 from datetime import datetime
 import streamlit.components.v1 as components
 from zoneinfo import ZoneInfo
@@ -96,231 +97,251 @@ else:
 # --- chat history
 
 
-components.html(
-    """
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-        <style>
-            * {
-                box-sizing: border-box;
+# Load your custom mascot image
+image_path = Path(__file__).parent / "querymind_sticker_small.webp"
+
+with open(image_path, "rb") as image_file:
+    mascot_data = base64.b64encode(image_file.read()).decode("utf-8")
+
+mascot_data_url = f"data:image/webp;base64,{mascot_data}"
+
+html_code = """
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            background: transparent;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+        }
+
+        .container {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            padding: 18px 8px 12px;
+            gap: 18px;
+        }
+
+        /* Title and custom mascot */
+        .animated-title {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            color: #6C63FF;
+            font-size: clamp(27px, 6vw, 46px);
+            font-weight: 700;
+            line-height: 1.3;
+            margin: 0;
+            letter-spacing: -0.7px;
+        }
+
+        .title-mascot {
+            width: clamp(34px, 7vw, 48px);
+            height: clamp(34px, 7vw, 48px);
+            object-fit: contain;
+            flex-shrink: 0;
+            filter: drop-shadow(
+                0 2px 4px rgba(108, 99, 255, 0.2)
+            );
+        }
+
+        .title-text {
+            display: inline-block;
+        }
+
+        /* Greeting */
+        .greeting {
+            color: #008C95;
+            font-size: clamp(16px, 3vw, 21px);
+            font-weight: 600;
+            line-height: 1.7;
+            margin: 0;
+            max-width: 650px;
+            overflow-wrap: anywhere;
+        }
+
+        /* Word-by-word entrance */
+        .word {
+            display: inline-block;
+            opacity: 0;
+            transform: translateY(10px);
+            animation: wordAppear 0.4s ease forwards;
+            margin-right: 0.22em;
+        }
+
+        @keyframes wordAppear {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Gentle title animation */
+        .animated-title.toggle {
+            animation: titleToggle 2.5s ease-in-out infinite;
+            transform-origin: center;
+        }
+
+        @keyframes titleToggle {
+            0%, 100% {
+                opacity: 1;
+                transform: scale(1);
             }
 
-            html, body {
-                margin: 0;
-                padding: 0;
-                width: 100%;
-                background: transparent;
-                overflow: hidden;
-                font-family: Arial, sans-serif;
+            50% {
+                opacity: 0.9;
+                transform: scale(1.015);
             }
+        }
 
-            .container {
-                width: 100%;
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                text-align: center;
-                padding: 18px 8px 12px;
-                gap: 18px;
-            }
-
-            /* Title with custom mascot */
+        /* Dark mode */
+        @media (prefers-color-scheme: dark) {
             .animated-title {
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                flex-wrap: wrap;
-                gap: 10px;
-                color: #6C63FF;
-                font-size: clamp(27px, 6vw, 46px);
-                font-weight: 700;
-                line-height: 1.3;
-                margin: 0;
-                letter-spacing: -0.7px;
+                color: #B8B2FF;
+            }
+
+            .greeting {
+                color: #5EEAD4;
+            }
+        }
+
+        /* Mobile layout */
+        @media (max-width: 480px) {
+            .container {
+                padding: 14px 5px 10px;
+                gap: 15px;
+            }
+
+            .animated-title {
+                font-size: 29px;
+                gap: 7px;
+                letter-spacing: -0.4px;
             }
 
             .title-mascot {
-                width: clamp(34px, 7vw, 48px);
-                height: clamp(34px, 7vw, 48px);
-                object-fit: contain;
-                flex-shrink: 0;
-                filter: drop-shadow(0 2px 4px rgba(108, 99, 255, 0.2));
+                width: 34px;
+                height: 34px;
             }
 
-            .title-text {
-                display: inline-block;
-            }
-
-            /* Greeting */
             .greeting {
-                color: #008C95;
-                font-size: clamp(16px, 3vw, 21px);
-                font-weight: 600;
-                line-height: 1.7;
-                margin: 0;
-                max-width: 650px;
-                overflow-wrap: anywhere;
+                font-size: 17px;
+                line-height: 1.6;
             }
+        }
 
-            /* Word-by-word entrance */
+        /* Accessibility */
+        @media (prefers-reduced-motion: reduce) {
             .word {
-                display: inline-block;
-                opacity: 0;
-                transform: translateY(10px);
-                animation: wordAppear 0.4s ease forwards;
-                margin-right: 0.22em;
+                animation: none;
+                opacity: 1;
+                transform: none;
             }
 
-            @keyframes wordAppear {
-                to {
-                    opacity: 1;
-                    transform: translateY(0);
-                }
-            }
-
-            /* Subtle title animation */
             .animated-title.toggle {
-                animation: titleToggle 2.5s ease-in-out infinite;
-                transform-origin: center;
+                animation: none;
             }
+        }
+    </style>
+</head>
 
-            @keyframes titleToggle {
-                0%, 100% {
-                    opacity: 1;
-                    transform: scale(1);
-                }
+<body>
+    <div class="container">
+        <h1 class="animated-title" id="title">
+            <img
+                class="title-mascot"
+                src="MASCOT_DATA_URL"
+                alt="QueryMind AI mascot"
+            />
+            <span class="title-text" id="titleText"></span>
+        </h1>
 
-                50% {
-                    opacity: 0.9;
-                    transform: scale(1.015);
-                }
-            }
+        <p class="greeting" id="greeting"></p>
+    </div>
 
-            /* Dark mode */
-            @media (prefers-color-scheme: dark) {
-                .animated-title {
-                    color: #B8B2FF;
-                }
+    <script>
+        const titleText = "QueryMind-AI";
+        const greetingText = "YOUR_GREETING";
 
-                .greeting {
-                    color: #5EEAD4;
-                }
-            }
+        const title = document.getElementById("title");
+        const titleTextElement =
+            document.getElementById("titleText");
+        const greeting = document.getElementById("greeting");
 
-            /* Mobile layout */
-            @media (max-width: 480px) {
-                .container {
-                    padding: 14px 5px 10px;
-                    gap: 15px;
-                }
+        function animateWords(element, text, startDelay) {
+            const words = text.trim().split(/\\s+/);
+            const wordDelay = 300;
 
-                .animated-title {
-                    font-size: 29px;
-                    gap: 7px;
-                    letter-spacing: -0.4px;
-                }
+            words.forEach((word, index) => {
+                const span = document.createElement("span");
 
-                .title-mascot {
-                    width: 34px;
-                    height: 34px;
-                }
+                span.className = "word";
+                span.textContent = word;
+                span.style.animationDelay =
+                    (startDelay + index * wordDelay) + "ms";
 
-                .greeting {
-                    font-size: 17px;
-                    line-height: 1.6;
-                }
-            }
+                element.appendChild(span);
+                element.appendChild(
+                    document.createTextNode(" ")
+                );
+            });
 
-            /* Accessibility */
-            @media (prefers-reduced-motion: reduce) {
-                .word {
-                    animation: none;
-                    opacity: 1;
-                    transform: none;
-                }
+            return startDelay + words.length * wordDelay;
+        }
 
-                .animated-title.toggle {
-                    animation: none;
-                }
-            }
-        </style>
-    </head>
+        const titleDuration = animateWords(
+            titleTextElement,
+            titleText,
+            0
+        );
 
-    <body>
-        <div class="container">
-            <h1 class="animated-title" id="title">
-                <img
-                    class="title-mascot"
-                    src="querymind_sticker_small.webp"
-                    alt="QueryMind AI mascot"
-                />
-                <span class="title-text" id="titleText"></span>
-            </h1>
+        const greetingDuration = animateWords(
+            greeting,
+            greetingText,
+            titleDuration + 300
+        );
 
-            <p class="greeting" id="greeting"></p>
-        </div>
+        setTimeout(() => {
+            title.querySelectorAll(".word").forEach(word => {
+                word.style.animation = "none";
+                word.style.opacity = "1";
+                word.style.transform = "none";
+            });
 
-        <script>
-            const titleText = "QueryMind-AI";
-            const greetingText = "YOUR_GREETING";
+            title.classList.add("toggle");
+        }, greetingDuration + 500);
+    </script>
+</body>
+</html>
+"""
 
-            const title = document.getElementById("title");
-            const titleTextElement =
-                document.getElementById("titleText");
-            const greeting = document.getElementById("greeting");
+html_code = (
+    html_code
+    .replace("MASCOT_DATA_URL", mascot_data_url)
+    .replace("YOUR_GREETING", greeting)
+)
 
-            function animateWords(element, text, startDelay) {
-                const words = text.trim().split(/\\s+/);
-                const wordDelay = 300;
-
-                words.forEach((word, index) => {
-                    const span = document.createElement("span");
-
-                    span.className = "word";
-                    span.textContent = word;
-                    span.style.animationDelay =
-                        (startDelay + index * wordDelay) + "ms";
-
-                    element.appendChild(span);
-                    element.appendChild(
-                        document.createTextNode(" ")
-                    );
-                });
-
-                return startDelay + words.length * wordDelay;
-            }
-
-            const titleDuration = animateWords(
-                titleTextElement,
-                titleText,
-                0
-            );
-
-            const greetingDuration = animateWords(
-                greeting,
-                greetingText,
-                titleDuration + 300
-            );
-
-            setTimeout(() => {
-                title.querySelectorAll(".word").forEach(word => {
-                    word.style.animation = "none";
-                    word.style.opacity = "1";
-                    word.style.transform = "none";
-                });
-
-                title.classList.add("toggle");
-            }, greetingDuration + 500);
-        </script>
-    </body>
-    </html>
-    """.replace("YOUR_GREETING", greeting),
+components.html(
+    html_code,
     height=190,
     scrolling=False,
 )
+
 
 
 def show_sources(hits: list[dict]) -> None:
