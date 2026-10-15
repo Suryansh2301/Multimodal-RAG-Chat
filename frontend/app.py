@@ -114,28 +114,30 @@ components.html(
                 flex-direction: column;
                 align-items: center;
                 text-align: center;
-                padding: 12px 8px;
+                padding: 18px 8px 12px;
                 gap: 18px;
             }
 
+            /* Title */
             .animated-title {
-                color: var(--title-color, #202124);
+                color: #6C63FF;
                 font-size: clamp(27px, 6vw, 46px);
-                font-weight: 750;
+                font-weight: 800;
                 line-height: 1.3;
                 margin: 0;
                 overflow-wrap: anywhere;
-                opacity: 0;
+                letter-spacing: -0.7px;
             }
 
+            /* Greeting */
             .greeting {
-                color: var(--greeting-color, #444444);
+                color: #008C95;
                 font-size: clamp(16px, 3vw, 21px);
+                font-weight: 600;
                 line-height: 1.7;
                 margin: 0;
                 max-width: 650px;
                 overflow-wrap: anywhere;
-                opacity: 0;
             }
 
             /* Word-by-word entrance */
@@ -144,7 +146,7 @@ components.html(
                 opacity: 0;
                 transform: translateY(10px);
                 animation: wordAppear 0.4s ease forwards;
-                margin-right: 0.24em;
+                margin-right: 0.22em;
             }
 
             @keyframes wordAppear {
@@ -154,7 +156,7 @@ components.html(
                 }
             }
 
-            /* Only the title toggles after the entrance */
+            /* Only title toggles after the entrance */
             .animated-title.toggle {
                 animation: titleToggle 2.5s ease-in-out infinite;
             }
@@ -166,46 +168,41 @@ components.html(
                 }
 
                 50% {
-                    opacity: 0.78;
+                    opacity: 0.82;
                     transform: scale(1.025);
                 }
             }
 
+            /* Dark mode */
             @media (prefers-color-scheme: dark) {
                 .animated-title {
-                    --title-color: #F5F5F5;
+                    color: #B8B2FF;
                 }
 
                 .greeting {
-                    --greeting-color: #D1D5DB;
+                    color: #5EEAD4;
                 }
             }
 
-            @media (prefers-color-scheme: light) {
-                .animated-title {
-                    --title-color: #202124;
-                }
-
-                .greeting {
-                    --greeting-color: #444444;
-                }
-            }
-
+            /* Mobile layout */
             @media (max-width: 480px) {
                 .container {
-                    padding: 10px 4px;
-                    gap: 14px;
+                    padding: 14px 5px 10px;
+                    gap: 15px;
                 }
 
                 .animated-title {
                     font-size: 29px;
+                    letter-spacing: -0.4px;
                 }
 
                 .greeting {
                     font-size: 17px;
+                    line-height: 1.6;
                 }
             }
 
+            /* Respect accessibility settings */
             @media (prefers-reduced-motion: reduce) {
                 .word {
                     animation: none;
@@ -215,7 +212,6 @@ components.html(
 
                 .animated-title.toggle {
                     animation: none;
-                    opacity: 1;
                 }
             }
         </style>
@@ -236,33 +232,36 @@ components.html(
 
             function animateWords(element, text, startDelay) {
                 const words = text.split(/\\s+/);
-                const wordDelay = 350;
+                const wordDelay = 300;
 
                 words.forEach((word, index) => {
                     const span = document.createElement("span");
+
                     span.className = "word";
                     span.textContent = word;
                     span.style.animationDelay =
                         (startDelay + index * wordDelay) + "ms";
 
                     element.appendChild(span);
-                    element.appendChild(document.createTextNode(" "));
+                    element.appendChild(
+                        document.createTextNode(" ")
+                    );
                 });
-
-                element.style.opacity = "1";
 
                 return startDelay + words.length * wordDelay;
             }
 
-            const titleDuration = animateWords(title, titleText, 0);
+            const titleDuration = animateWords(
+                title,
+                titleText,
+                0
+            );
 
             const greetingDuration = animateWords(
                 greeting,
                 greetingText,
                 titleDuration + 300
             );
-
-            const animationEnd = greetingDuration + 500;
 
             setTimeout(() => {
                 title.querySelectorAll(".word").forEach(word => {
@@ -272,16 +271,14 @@ components.html(
                 });
 
                 title.classList.add("toggle");
-            }, animationEnd);
+            }, greetingDuration + 500);
         </script>
     </body>
     </html>
     """.replace("YOUR_GREETING", greeting),
-    height=180,
+    height=190,
     scrolling=False,
 )
-
-
 
 def show_sources(hits: list[dict]) -> None:
     with st.expander(f"Sources ({len(hits)})"):
