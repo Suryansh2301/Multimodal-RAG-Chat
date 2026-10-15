@@ -1,33 +1,34 @@
-"""Thin ChromaDB wrapper. The collection name includes the embedding model,
-so switching EMBED_MODEL never causes a dimension-mismatch error."""
+
 import re
 
 import chromadb
-from fastembed import TextEmbedding
 
 from backend import config
+from backend.embeddings import embed_query, embed_texts
+
+try:
+    from backend.memguard import check_memory
+except ImportError:                         
+    def check_memory() -> None:
+        pass
 
 
 class VectorStore:
     def __init__(self):
         config.CHROMA_DIR.mkdir(parents=True, exist_ok=True)
         self._db = chromadb.PersistentClient(path=str(config.CHROMA_DIR))
-        self._embedder = TextEmbedding(model_name=config.EMBED_MODEL)   # ONNX, no torch
         slug = re.sub(r"[^a-zA-Z0-9]+", "_", config.EMBED_MODEL).strip("_")[:40]
-        self._name = f"kb_{slug}"
+        self._name = f"kb_{slug}_{config.EMBED_DIM}"
+        self.last_source = None
         self.col = self._db.get_or_create_collection(
             self._name, metadata={"hnsw:space": "cosine"}
         )
-
-    def _embed(self, texts: list[str]) -> list[list[float]]:
-        return [v.tolist() for v in self._embedder.embed(texts)]
 
     def add(self, source: str, chunks: list[dict]) -> int:
         return self.add_stream(source, iter(chunks))
 
     def add_stream(self, source: str, chunks) -> int:
-        """Consume chunks lazily, embedding and storing ADD_BATCH at a time."""
-        self.delete_source(source)               # re-uploading a file replaces it
+        self.delete_source(source)           # re-uploading a file replaces it
         total, batch = 0, []
         for c in chunks:
             batch.append(c)
@@ -36,28 +37,39 @@ class VectorStore:
                 batch = []
         if batch:
             total += self._flush(source, batch, total)
+        if total:
+            self.last_source = source
         return total
 
     def _flush(self, source: str, batch: list[dict], offset: int) -> int:
+        check_memory()
         docs = [c["text"] for c in batch]
         self.col.add(
             ids=[f"{source}::{offset + i}" for i in range(len(batch))],
             documents=docs,
-            embeddings=self._embed(docs),
+            embeddings=embed_texts(docs),
             metadatas=[c["meta"] for c in batch],
         )
         return len(batch)
-    
+
     def search(self, query: str, k: int) -> list[dict]:
         n = self.col.count()
         if n == 0:
             return []
-        qv = next(iter(self._embedder.query_embed([query]))).tolist()
-        res = self.col.query(query_embeddings=[qv], n_results=min(k, n))
+        res = self.col.query(query_embeddings=[embed_query(query)], n_results=min(k, n))
         return [
             {"text": d, "meta": m, "distance": dist}
             for d, m, dist in zip(res["documents"][0], res["metadatas"][0], res["distances"][0])
         ]
+
+    def sample(self, source: str, n: int) -> list[dict]:
+        """Evenly spaced chunks across a file, in page order (for summaries)."""
+        res = self.col.get(where={"source": source}, include=["documents", "metadatas"], limit=500)
+        items = sorted(zip(res["documents"], res["metadatas"]), key=lambda x: x[1].get("page", 0))
+        if not items:
+            return []
+        step = max(1, len(items) // n)
+        return [{"text": d, "meta": m, "distance": 0.0} for d, m in items[::step][:n]]
 
     def sources(self) -> dict[str, int]:
         counts: dict[str, int] = {}

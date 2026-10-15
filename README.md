@@ -26,6 +26,8 @@ multimodal-rag-chatbot/
 │   ├── ingest.py          # PDF/DOCX/CSV/XLSX/image -> text -> chunks
 │   ├── vectorstore.py     # ChromaDB + local embeddings
 │   ├── rag.py             # ingest_file() and ask()
+|   |--embeddings.py 
+|   |--memguard.py
 │   └── requirements.txt
 ├── frontend/
 │   ├── app.py             # Streamlit chat UI
@@ -50,6 +52,8 @@ streamlit run frontend/app.py
 ```
 Open http://localhost:8501 for the chat and http://localhost:8000/docs for the interactive API docs.
 If the backend runs elsewhere, set `API_URL=http://host:port` before starting Streamlit.
+project live https://querymind--ai.streamlit.app/
+FastAPI SwaggerUI https://multimodal-rag-chat.onrender.com/docs
 
 ## API
 | Method | Path | Purpose |
@@ -76,7 +80,7 @@ curl -N -F "message=What changed in Q3?" -F 'history=[]' http://localhost:8000/c
 | Follow-up question rewriting | `openai/gpt-oss-20b` |
 | Final cited answer (streamed) | `openai/gpt-oss-120b` |
 | Question with an attached image (direct visual Q&A) | `qwen/qwen3.6-27b` |
-| Embeddings (local) | `BAAI/bge-small-en-v1.5` |
+| Gemini Embeddings model | `gemini-embedding-2` |
 
 ## Notes
 - Qwen vision models on Groq are **Preview**; swap with `VISION_MODEL` in `.env`.

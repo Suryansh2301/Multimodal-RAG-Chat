@@ -14,10 +14,12 @@ VISION_MODEL = os.getenv("VISION_MODEL", "qwen/qwen3.6-27b")   # images, scans, 
 TEXT_MODEL = os.getenv("TEXT_MODEL", "openai/gpt-oss-120b")    # final answers
 FAST_MODEL = os.getenv("FAST_MODEL", "openai/gpt-oss-20b")     # query rewriting
 
-# --- Embeddings
-EMBED_MODEL = os.getenv("EMBED_MODEL", "BAAI/bge-small-en-v1.5")
-EMBED_BATCH = 8               # chunks embedded at once (keeps RAM low)
-ADD_BATCH = 32                # chunks written to Chroma at once
+# --- Embeddings (Gemini API)
+EMBED_MODEL = os.getenv("EMBED_MODEL", "gemini-embedding-2")
+EMBED_DIM = 768
+EMBED_TPM_BUDGET = 25000      # stay under the free tier's 30,000 tokens/minute
+EMBED_BATCH = 20
+ADD_BATCH = 20              # chunks written to Chroma at once
 
 # --- Chunking / retrieval
 CHUNK_SIZE = 900
@@ -36,3 +38,7 @@ ALL_TYPES = IMAGE_TYPES + DOC_TYPES + TABLE_TYPES
 # --- API
 MAX_UPLOAD_MB = 5
 MAX_TOP_K = 20
+
+
+MEM_SOFT_LIMIT_MB = 400
+MAX_PDF_PAGES = 40
