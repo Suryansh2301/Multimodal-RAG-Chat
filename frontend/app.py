@@ -281,20 +281,6 @@ components.html(
     scrolling=False,
 )
 
-# Your existing time-based greeting
-st.markdown(
-    f"""
-    <div style="
-        text-align: center;
-        color: #000000;
-        font-size: 17px;
-        padding: 5px;
-    ">
-        {greeting}
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
 
 
 def show_sources(hits: list[dict]) -> None:
