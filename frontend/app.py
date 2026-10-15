@@ -3,7 +3,7 @@ import streamlit as st
 
 import api_client as api
 
-st.set_page_config(page_title="Multimodal RAG Chat", page_icon="💬", layout="centered")
+st.set_page_config(page_title="QueryMind-ai", page_icon="💬", layout="centered")
 
 st.markdown(
     """
@@ -65,7 +65,7 @@ with st.sidebar:
         st.rerun()
 
 # --- chat history
-st.title("💬 Multimodal RAG Chat")
+st.title("💬 QueryMind-ai")
 st.caption("Use the attach button inside the message box to add images, documents or tables.")
 
 
@@ -134,7 +134,7 @@ if prompt:
                         status.update(label="Files processed", state="complete", expanded=False)
                 if all(r["error"] or r["chunks"] == 0 for r in results):
                     st.stop()
-                    
+
             # 2) stream the answer from POST /chat
             stream = api.chat_stream(question, history, images, top_k)
             answer = st.write_stream(stream.tokens())
