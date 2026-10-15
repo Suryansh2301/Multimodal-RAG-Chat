@@ -66,6 +66,7 @@ with st.sidebar:
 
 #-- time based greetings
 from datetime import datetime
+import streamlit.components.v1 as components
 from zoneinfo import ZoneInfo
 
 
@@ -85,20 +86,62 @@ else:
     greeting = "Hello, Night Owl"
 
 # --- chat history
-st.title("💬 QueryMind-ai")
-# st.caption("Use the attach button inside the message box to add images, documents or tables.")
+
+# Centered, animated QueryMind-AI title
+components.html(
+    """
+    <div class="title-container">
+        <h1 class="animated-title">💬 QueryMind-AI</h1>
+    </div>
+
+    <style>
+        .title-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            padding: 25px 0 10px 0;
+        }
+
+        .animated-title {
+            color: #000000;
+            font-size: 48px;
+            font-weight: 750;
+            text-align: center;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            animation: titleToggle 2s ease-in-out infinite;
+        }
+
+        @keyframes titleToggle {
+            0%, 100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: 0.65;
+                transform: scale(1.04);
+            }
+        }
+    </style>
+    """,
+    height=115,
+)
+
+# Your existing time-based greeting
 st.markdown(
     f"""
     <div style="
-    text-align: center;
-    font-size: 17px;
-    padding: 8px;
-    color: #8B9DFF;
+        text-align: center;
+        color: #000000;
+        font-size: 17px;
+        padding: 5px;
     ">
-    {greeting}
+        {greeting}
     </div>
-""",
-unsafe_allow_html=True
+    """,
+    unsafe_allow_html=True,
 )
 
 
