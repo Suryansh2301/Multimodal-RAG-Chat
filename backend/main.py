@@ -23,16 +23,21 @@ from backend.schemas import (
 )
 from backend.vectorstore import VectorStore
 import threading
+import gc
 
 log = logging.getLogger("backend")
 HISTORY = TypeAdapter(list[Message])
 _store_lock = threading.Lock()
-
+_ingest_gate = threading.Semaphore(1)     # one ingest at a time (memory)
 
 def _ensure_store(app: FastAPI) -> VectorStore:
     with _store_lock:
         if app.state.store is None:
-            app.state.store = VectorStore()
+            try:
+                app.state.store = VectorStore()
+            except Exception:
+                log.exception("VectorStore failed to initialise")
+                raise
         return app.state.store
 
 
@@ -72,19 +77,25 @@ def health():
 @app.post("/ingest", response_model=IngestResponse)
 def ingest(files: list[UploadFile] = File(...), store: VectorStore = Depends(get_store)):
     results = []
-    for f in files:
-        name = Path(f.filename or "upload").name
-        try:
-            ext = Path(name).suffix.lower().lstrip(".")
-            if ext not in config.ALL_TYPES:
-                raise ValueError(f"Unsupported file type .{ext}")
-            data = f.file.read()
-            if len(data) > config.MAX_UPLOAD_MB * 1024 * 1024:
-                raise ValueError(f"File is larger than {config.MAX_UPLOAD_MB} MB")
-            results.append(IngestResult(name=name, chunks=rag.ingest_file(store, name, data)))
-        except Exception as e:            # one bad file must not fail the whole batch
-            log.warning("ingest failed for %s: %s", name, e)
-            results.append(IngestResult(name=name, chunks=0, error=str(e)))
+    limit = config.MAX_UPLOAD_MB * 1024 * 1024
+    with _ingest_gate:
+        for f in files:
+            name = Path(f.filename or "upload").name
+            data = None
+            try:
+                ext = Path(name).suffix.lower().lstrip(".")
+                if ext not in config.ALL_TYPES:
+                    raise ValueError(f"Unsupported file type .{ext}")
+                data = f.file.read(limit + 1)          # never read more than the cap
+                if len(data) > limit:
+                    raise ValueError(f"File is larger than {config.MAX_UPLOAD_MB} MB")
+                results.append(IngestResult(name=name, chunks=rag.ingest_file(store, name, data)))
+            except Exception as e:            # one bad file must not fail the whole batch
+                log.warning("ingest failed for %s: %s", name, e)
+                results.append(IngestResult(name=name, chunks=0, error=str(e)))
+            finally:
+                del data
+                gc.collect()
     return IngestResponse(results=results)
 
 

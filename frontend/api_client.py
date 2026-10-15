@@ -6,6 +6,8 @@ from typing import Iterator
 import requests
 from urllib.parse import quote
 
+# if you are running the frontend in a separate container, set API_URL to the backend container name (e.g. http://backend:8000)
+# API_URL = os.getenv("API_URL", "http://localhost:8000").rstrip("/")
 API_URL = os.getenv("API_URL", "https://multimodal-rag-chat.onrender.com").rstrip("/")
 
 

@@ -1,13 +1,14 @@
 """Turn any uploaded file into text elements, then into overlapping chunks."""
+from __future__ import annotations
+
 from dataclasses import dataclass
-from docx import Document
+from docx import Document                           
 from io import BytesIO
 from pathlib import Path
-
-import pandas as pd
-
-import pdfplumber
+from typing import Iterable, Iterator
+import pdfplumber  
 from backend import config, llm
+import pandas as pd  
 
 
 @dataclass
@@ -30,8 +31,8 @@ def rows_to_markdown(rows: list[list]) -> str:
     return "\n".join(lines)
 
 
-def dataframe_elements(df: pd.DataFrame, label: str) -> list[Element]:
-    df = df.dropna(how="all").dropna(axis=1, how="all").head(5000)
+def dataframe_elements(df, label: str) -> list[Element]:
+    df = df.dropna(how="all").dropna(axis=1, how="all").head(2000)
     if df.empty:
         return []
     summary = (
@@ -42,25 +43,33 @@ def dataframe_elements(df: pd.DataFrame, label: str) -> list[Element]:
 
 
 # per-format loaders
-def load_pdf(data: bytes) -> list[Element]:
+def iter_pdf(data: bytes) -> Iterator[Element]:
+    """Yield one page's elements at a time so memory stays flat."""
 
-    out: list[Element] = []
     vision_used = 0
     with pdfplumber.open(BytesIO(data)) as pdf:
         for i, page in enumerate(pdf.pages, start=1):
-            text = (page.extract_text() or "").strip()
-            for tbl in page.extract_tables():
-                md = rows_to_markdown(tbl)
-                if md:
-                    out.append(Element(md, "table", i))
-            if len(text) >= 30:
-                out.append(Element(text, "text", i))
-            elif vision_used < config.MAX_VISION_PDF_PAGES:   # scanned page -> vision model
-                buf = BytesIO()
-                page.to_image(resolution=150).original.save(buf, "PNG")
-                out.append(Element(llm.describe_image(buf.getvalue()), "image", i))
-                vision_used += 1
-    return out
+            try:
+                text = (page.extract_text() or "").strip()
+                for tbl in page.extract_tables():
+                    md = rows_to_markdown(tbl)
+                    if md:
+                        yield Element(md, "table", i)
+                if len(text) >= 30:
+                    yield Element(text, "text", i)
+                elif vision_used < config.MAX_VISION_PDF_PAGES:   # scanned page -> vision model
+                    img = page.to_image(resolution=110)
+                    try:
+                        buf = BytesIO()
+                        img.original.save(buf, "PNG")
+                        png = buf.getvalue()
+                    finally:
+                        img.original.close()
+                    del buf, img
+                    yield Element(llm.describe_image(png), "image", i)
+                    vision_used += 1
+            finally:
+                page.flush_cache()                      # drop this page's parsed objects
 
 
 def load_docx(data: bytes) -> list[Element]:
@@ -78,12 +87,14 @@ def load_docx(data: bytes) -> list[Element]:
 
 
 def load_csv(data: bytes, name: str) -> list[Element]:
-    return dataframe_elements(pd.read_csv(BytesIO(data)), name)
+
+    return dataframe_elements(pd.read_csv(BytesIO(data), nrows=5000), name)
 
 
 def load_xlsx(data: bytes, name: str) -> list[Element]:
+
     out = []
-    for sheet, df in pd.read_excel(BytesIO(data), sheet_name=None).items():
+    for sheet, df in pd.read_excel(BytesIO(data), sheet_name=None, nrows=5000).items():
         out += dataframe_elements(df, f"{name} / {sheet}")
     return out
 
@@ -96,21 +107,26 @@ def load_image(data: bytes) -> list[Element]:
     return [Element(llm.describe_image(data), "image")]
 
 
-def load_file(name: str, data: bytes) -> list[Element]:
+def iter_elements(name: str, data: bytes) -> Iterator[Element]:
     ext = Path(name).suffix.lower().lstrip(".")
     if ext == "pdf":
-        return load_pdf(data)
-    if ext == "docx":
-        return load_docx(data)
-    if ext == "csv":
-        return load_csv(data, name)
-    if ext == "xlsx":
-        return load_xlsx(data, name)
-    if ext in ("txt", "md"):
-        return load_text(data)
-    if ext in config.IMAGE_TYPES:
-        return load_image(data)
-    raise ValueError(f"Unsupported file type: .{ext}")
+        yield from iter_pdf(data)
+    elif ext == "docx":
+        yield from load_docx(data)
+    elif ext == "csv":
+        yield from load_csv(data, name)
+    elif ext == "xlsx":
+        yield from load_xlsx(data, name)
+    elif ext in ("txt", "md"):
+        yield from load_text(data)
+    elif ext in config.IMAGE_TYPES:
+        yield from load_image(data)
+    else:
+        raise ValueError(f"Unsupported file type: .{ext}")
+
+
+def load_file(name: str, data: bytes) -> list[Element]:   # kept for compatibility
+    return list(iter_elements(name, data))
 
 
 # chunking
@@ -141,13 +157,15 @@ def split_table(md: str, rows_per_chunk: int) -> list[str]:
     return ["\n".join(header + body[i:i + rows_per_chunk]) for i in range(0, len(body), rows_per_chunk)]
 
 
-def chunk_elements(elements: list[Element], source: str) -> list[dict]:
-    chunks = []
+def iter_chunks(elements: Iterable[Element], source: str) -> Iterator[dict]:
     for el in elements:
         if el.kind == "table":
             pieces = split_table(el.text, config.TABLE_ROWS_PER_CHUNK)
         else:
             pieces = split_text(el.text, config.CHUNK_SIZE, config.CHUNK_OVERLAP)
         for p in pieces:
-            chunks.append({"text": p, "meta": {"source": source, "page": el.page, "kind": el.kind}})
-    return chunks
+            yield {"text": p, "meta": {"source": source, "page": el.page, "kind": el.kind}}
+
+
+def chunk_elements(elements: Iterable[Element], source: str) -> list[dict]:  # compatibility
+    return list(iter_chunks(elements, source))

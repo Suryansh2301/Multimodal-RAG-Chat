@@ -23,18 +23,31 @@ class VectorStore:
         return [v.tolist() for v in self._embedder.embed(texts)]
 
     def add(self, source: str, chunks: list[dict]) -> int:
+        return self.add_stream(source, iter(chunks))
+
+    def add_stream(self, source: str, chunks) -> int:
+        """Consume chunks lazily, embedding and storing ADD_BATCH at a time."""
         self.delete_source(source)               # re-uploading a file replaces it
-        if not chunks:
-            return 0
-        docs = [c["text"] for c in chunks]
+        total, batch = 0, []
+        for c in chunks:
+            batch.append(c)
+            if len(batch) >= config.ADD_BATCH:
+                total += self._flush(source, batch, total)
+                batch = []
+        if batch:
+            total += self._flush(source, batch, total)
+        return total
+
+    def _flush(self, source: str, batch: list[dict], offset: int) -> int:
+        docs = [c["text"] for c in batch]
         self.col.add(
-            ids=[f"{source}::{i}" for i in range(len(chunks))],
+            ids=[f"{source}::{offset + i}" for i in range(len(batch))],
             documents=docs,
             embeddings=self._embed(docs),
-            metadatas=[c["meta"] for c in chunks],
+            metadatas=[c["meta"] for c in batch],
         )
-        return len(chunks)
-
+        return len(batch)
+    
     def search(self, query: str, k: int) -> list[dict]:
         n = self.col.count()
         if n == 0:

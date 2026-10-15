@@ -4,11 +4,9 @@ from typing import Iterator
 from backend import ingest, llm
 from backend.vectorstore import VectorStore
 
-
 def ingest_file(store: VectorStore, name: str, data: bytes) -> int:
-    elements = ingest.load_file(name, data)
-    chunks = ingest.chunk_elements(elements, source=name)
-    return store.add(name, chunks)
+    chunks = ingest.iter_chunks(ingest.iter_elements(name, data), source=name)
+    return store.add_stream(name, chunks)
 
 
 def build_context(hits: list[dict]) -> str:
