@@ -83,7 +83,7 @@ elif 17 <= current_hour < 21:
 elif 21 <= current_hour < 24:
     greeting = "Good Night! Let's solve something."
 else:
-    greeting = "Hello, Night Owl"
+    greeting = "Hello,🦉Night Owl"
 
 # --- chat history
 
@@ -105,28 +105,58 @@ components.html(
                 width: 100%;
                 background: transparent;
                 overflow: hidden;
+                font-family: Arial, sans-serif;
             }
 
-            .title-container {
+            .container {
                 width: 100%;
                 display: flex;
                 flex-direction: column;
                 align-items: center;
-                justify-content: center;
-                padding: 12px 8px;
                 text-align: center;
+                padding: 12px 8px;
+                gap: 18px;
             }
 
             .animated-title {
-                color: #000000;
-                font-family: Arial, sans-serif;
-                font-size: clamp(25px, 6vw, 46px);
+                color: var(--title-color, #202124);
+                font-size: clamp(27px, 6vw, 46px);
                 font-weight: 750;
-                line-height: 1.25;
+                line-height: 1.3;
                 margin: 0;
-                max-width: 100%;
                 overflow-wrap: anywhere;
-                animation: titleToggle 2s ease-in-out infinite;
+                opacity: 0;
+            }
+
+            .greeting {
+                color: var(--greeting-color, #444444);
+                font-size: clamp(16px, 3vw, 21px);
+                line-height: 1.7;
+                margin: 0;
+                max-width: 650px;
+                overflow-wrap: anywhere;
+                opacity: 0;
+            }
+
+            /* Word-by-word entrance */
+            .word {
+                display: inline-block;
+                opacity: 0;
+                transform: translateY(10px);
+                animation: wordAppear 0.4s ease forwards;
+                margin-right: 0.24em;
+            }
+
+            @keyframes wordAppear {
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+
+            /* Only the title toggles after the entrance */
+            .animated-title.toggle {
+                animation: titleToggle 2.5s ease-in-out infinite;
             }
 
             @keyframes titleToggle {
@@ -136,38 +166,118 @@ components.html(
                 }
 
                 50% {
-                    opacity: 0.75;
-                    transform: scale(1.02);
+                    opacity: 0.78;
+                    transform: scale(1.025);
+                }
+            }
+
+            @media (prefers-color-scheme: dark) {
+                .animated-title {
+                    --title-color: #F5F5F5;
+                }
+
+                .greeting {
+                    --greeting-color: #D1D5DB;
+                }
+            }
+
+            @media (prefers-color-scheme: light) {
+                .animated-title {
+                    --title-color: #202124;
+                }
+
+                .greeting {
+                    --greeting-color: #444444;
                 }
             }
 
             @media (max-width: 480px) {
-                .animated-title {
-                    font-size: 29px;
-                    line-height: 1.3;
+                .container {
+                    padding: 10px 4px;
+                    gap: 14px;
                 }
 
-                .title-container {
-                    padding: 10px 4px;
+                .animated-title {
+                    font-size: 29px;
+                }
+
+                .greeting {
+                    font-size: 17px;
                 }
             }
 
             @media (prefers-reduced-motion: reduce) {
-                .animated-title {
+                .word {
                     animation: none;
+                    opacity: 1;
+                    transform: none;
+                }
+
+                .animated-title.toggle {
+                    animation: none;
+                    opacity: 1;
                 }
             }
         </style>
     </head>
 
     <body>
-        <div class="title-container">
-            <h1 class="animated-title">💬 QueryMind-AI</h1>
+        <div class="container">
+            <h1 class="animated-title" id="title"></h1>
+            <p class="greeting" id="greeting"></p>
         </div>
+
+        <script>
+            const titleText = "💬 QueryMind-AI";
+            const greetingText = "YOUR_GREETING";
+
+            const title = document.getElementById("title");
+            const greeting = document.getElementById("greeting");
+
+            function animateWords(element, text, startDelay) {
+                const words = text.split(/\\s+/);
+                const wordDelay = 350;
+
+                words.forEach((word, index) => {
+                    const span = document.createElement("span");
+                    span.className = "word";
+                    span.textContent = word;
+                    span.style.animationDelay =
+                        (startDelay + index * wordDelay) + "ms";
+
+                    element.appendChild(span);
+                    element.appendChild(document.createTextNode(" "));
+                });
+
+                element.style.opacity = "1";
+
+                return startDelay + words.length * wordDelay;
+            }
+
+            const titleDuration = animateWords(title, titleText, 0);
+
+            const greetingDuration = animateWords(
+                greeting,
+                greetingText,
+                titleDuration + 300
+            );
+
+            const animationEnd = greetingDuration + 500;
+
+            setTimeout(() => {
+                title.querySelectorAll(".word").forEach(word => {
+                    word.style.animation = "none";
+                    word.style.opacity = "1";
+                    word.style.transform = "none";
+                });
+
+                title.classList.add("toggle");
+            }, animationEnd);
+        </script>
     </body>
     </html>
-    """,
-    height=100,
+    """.replace("YOUR_GREETING", greeting),
+    height=180,
     scrolling=False,
 )
 
