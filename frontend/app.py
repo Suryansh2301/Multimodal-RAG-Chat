@@ -89,43 +89,86 @@ else:
 
 components.html(
     """
-    <div class="title-container">
-        <h1 class="animated-title">💬 QueryMind-AI</h1>
-    </div>
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <style>
-        .title-container {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            width: 100%;
-            padding: 25px 0 10px 0;
-        }
-
-        .animated-title {
-            color: #000000;
-            font-size: 48px;
-            font-weight: 750;
-            text-align: center;
-            font-family: Arial, sans-serif;
-            margin: 0;
-            animation: titleToggle 2s ease-in-out infinite;
-        }
-
-        @keyframes titleToggle {
-            0%, 100% {
-                opacity: 1;
-                transform: scale(1);
+        <style>
+            * {
+                box-sizing: border-box;
             }
 
-            50% {
-                opacity: 0.65;
-                transform: scale(1.04);
+            html, body {
+                margin: 0;
+                padding: 0;
+                width: 100%;
+                background: transparent;
+                overflow: hidden;
             }
-        }
-    </style>
+
+            .title-container {
+                width: 100%;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                padding: 12px 8px;
+                text-align: center;
+            }
+
+            .animated-title {
+                color: #000000;
+                font-family: Arial, sans-serif;
+                font-size: clamp(25px, 6vw, 46px);
+                font-weight: 750;
+                line-height: 1.25;
+                margin: 0;
+                max-width: 100%;
+                overflow-wrap: anywhere;
+                animation: titleToggle 2s ease-in-out infinite;
+            }
+
+            @keyframes titleToggle {
+                0%, 100% {
+                    opacity: 1;
+                    transform: scale(1);
+                }
+
+                50% {
+                    opacity: 0.75;
+                    transform: scale(1.02);
+                }
+            }
+
+            @media (max-width: 480px) {
+                .animated-title {
+                    font-size: 29px;
+                    line-height: 1.3;
+                }
+
+                .title-container {
+                    padding: 10px 4px;
+                }
+            }
+
+            @media (prefers-reduced-motion: reduce) {
+                .animated-title {
+                    animation: none;
+                }
+            }
+        </style>
+    </head>
+
+    <body>
+        <div class="title-container">
+            <h1 class="animated-title">💬 QueryMind-AI</h1>
+        </div>
+    </body>
+    </html>
     """,
-    height=115,
+    height=100,
+    scrolling=False,
 )
 
 # Your existing time-based greeting
