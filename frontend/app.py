@@ -2,8 +2,16 @@
 import streamlit as st
 
 import api_client as api
+from pathlib import Path
 
-st.set_page_config(page_title="QueryMind-ai", page_icon="💬", layout="centered")
+icon_path = Path(__file__).parent / "querymind_sticker_small.webp"
+
+st.set_page_config(
+    page_title="QueryMind-AI",
+    page_icon=str(icon_path),
+    layout="centered"
+)
+
 
 st.markdown(
     """
@@ -87,6 +95,7 @@ else:
 
 # --- chat history
 
+
 components.html(
     """
     <!DOCTYPE html>
@@ -118,15 +127,31 @@ components.html(
                 gap: 18px;
             }
 
-            /* Title */
+            /* Title with custom mascot */
             .animated-title {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                flex-wrap: wrap;
+                gap: 10px;
                 color: #6C63FF;
                 font-size: clamp(27px, 6vw, 46px);
-                font-weight: 800;
+                font-weight: 700;
                 line-height: 1.3;
                 margin: 0;
-                overflow-wrap: anywhere;
                 letter-spacing: -0.7px;
+            }
+
+            .title-mascot {
+                width: clamp(34px, 7vw, 48px);
+                height: clamp(34px, 7vw, 48px);
+                object-fit: contain;
+                flex-shrink: 0;
+                filter: drop-shadow(0 2px 4px rgba(108, 99, 255, 0.2));
+            }
+
+            .title-text {
+                display: inline-block;
             }
 
             /* Greeting */
@@ -156,9 +181,10 @@ components.html(
                 }
             }
 
-            /* Only title toggles after the entrance */
+            /* Subtle title animation */
             .animated-title.toggle {
                 animation: titleToggle 2.5s ease-in-out infinite;
+                transform-origin: center;
             }
 
             @keyframes titleToggle {
@@ -168,8 +194,8 @@ components.html(
                 }
 
                 50% {
-                    opacity: 0.82;
-                    transform: scale(1.025);
+                    opacity: 0.9;
+                    transform: scale(1.015);
                 }
             }
 
@@ -193,7 +219,13 @@ components.html(
 
                 .animated-title {
                     font-size: 29px;
+                    gap: 7px;
                     letter-spacing: -0.4px;
+                }
+
+                .title-mascot {
+                    width: 34px;
+                    height: 34px;
                 }
 
                 .greeting {
@@ -202,7 +234,7 @@ components.html(
                 }
             }
 
-            /* Respect accessibility settings */
+            /* Accessibility */
             @media (prefers-reduced-motion: reduce) {
                 .word {
                     animation: none;
@@ -219,19 +251,29 @@ components.html(
 
     <body>
         <div class="container">
-            <h1 class="animated-title" id="title"></h1>
+            <h1 class="animated-title" id="title">
+                <img
+                    class="title-mascot"
+                    src="querymind_sticker_small.webp"
+                    alt="QueryMind AI mascot"
+                />
+                <span class="title-text" id="titleText"></span>
+            </h1>
+
             <p class="greeting" id="greeting"></p>
         </div>
 
         <script>
-            const titleText = "💬 QueryMind-AI";
+            const titleText = "QueryMind-AI";
             const greetingText = "YOUR_GREETING";
 
             const title = document.getElementById("title");
+            const titleTextElement =
+                document.getElementById("titleText");
             const greeting = document.getElementById("greeting");
 
             function animateWords(element, text, startDelay) {
-                const words = text.split(/\\s+/);
+                const words = text.trim().split(/\\s+/);
                 const wordDelay = 300;
 
                 words.forEach((word, index) => {
@@ -252,7 +294,7 @@ components.html(
             }
 
             const titleDuration = animateWords(
-                title,
+                titleTextElement,
                 titleText,
                 0
             );
@@ -279,6 +321,7 @@ components.html(
     height=190,
     scrolling=False,
 )
+
 
 def show_sources(hits: list[dict]) -> None:
     with st.expander(f"Sources ({len(hits)})"):
