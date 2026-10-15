@@ -120,10 +120,21 @@ if prompt:
             # 1) send attached files to POST /ingest
             if uploads:
                 with st.status("Reading your files…", expanded=True) as status:
-                    for r in api.ingest(images + doc_files):
-                        st.write(f" {r['name']}: {r['error']}" if r["error"] else f" {r['name']} → {r['chunks']} chunks")
-                    status.update(label="Files processed", state="complete", expanded=False)
-
+                    results = api.ingest(images + doc_files)
+                    failed = False
+                    for r in results:
+                        if r["error"] or r["chunks"] == 0:
+                            failed = True
+                            st.write(f"❌ {r['name']}: {r['error'] or 'no text could be extracted'}")
+                        else:
+                            st.write(f"✅ {r['name']} → {r['chunks']} chunks")
+                    if failed:
+                        status.update(label="Some files failed", state="error", expanded=True)
+                    else:
+                        status.update(label="Files processed", state="complete", expanded=False)
+                if all(r["error"] or r["chunks"] == 0 for r in results):
+                    st.stop()
+                    
             # 2) stream the answer from POST /chat
             stream = api.chat_stream(question, history, images, top_k)
             answer = st.write_stream(stream.tokens())
